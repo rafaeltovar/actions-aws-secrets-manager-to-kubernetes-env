@@ -1,0 +1,61 @@
+name: "Set Kubernetes Secrets"
+description: >-
+  Get Secrets from AWS Secrets Manager and set
+  them as Credentials in Kubernetes.
+inputs:
+  aws-access-key-id:
+    description: "AWS Access Key ID"
+    required: true
+  aws-secret-access-key:
+    description: "AWS Secret Access Key"
+    required: true
+  aws-region:
+    description: "AWS Region, e.g. us-east-2"
+    required: true
+  digital-ocean-token:
+    description: "DigitalOcean personal access token"
+    required: true
+  aws-secret-id:
+    description: "AWS Secrets Manager Secret ID"
+    required: true
+  kubernetes-secret-name:
+    description: "Kubernetes Secret name"
+    required: true
+  kubernetes-cluster-id:
+    description: "Kubernetes Cluster ID"
+    required: true
+runs:
+  using: "composite"
+  steps:
+      # install and configure doctl
+      - uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ inputs.digital-ocean-token }}
+      # install and configure aws cli
+      - uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ inputs.aws-access-key-id }}
+          aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+          aws-region: ${{ inputs.aws-region }}
+      # save digital ocean kubernetes config with short-lived credentials
+      - run: |
+          doctl kubernetes cluster kubeconfig save \
+            --expiry-seconds 600 ${{ inputs.kubernetes-cluster-id }}
+        shell: bash
+      # get secret from aws secret manager
+      - run: |
+          aws secretsmanager get-secret-value \
+            --secret-id ${{ inputs.aws-secret-id }} | jq -r \
+            ".SecretString | fromjson | to_entries | map(\"\(.key)=\(.value|tostring)\") | .[]" \
+            > secrets.env
+        shell: bash
+      # delete old kubernetes secret
+      - run: |
+          kubectl delete secret ${{ inputs.kubernetes-secret-name }} \
+            --ignore-not-found
+        shell: bash
+      # set new kubernetes secret
+      - run: |
+          kubectl create secret generic ${{ inputs.kubernetes-secret-name }} \
+            --from-env-file=secrets.env
+        shell: bash
