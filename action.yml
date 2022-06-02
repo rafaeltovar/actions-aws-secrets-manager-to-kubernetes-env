@@ -18,6 +18,9 @@ inputs:
   kubernetes-secret-name:
     description: "Kubernetes Secret name"
     required: true
+  kubernetes-secret-namespace:
+    description: "Kubernetes Secret namespace"
+    default: "default"
 runs:
   using: "composite"
   steps:
@@ -37,10 +40,11 @@ runs:
       # delete old kubernetes secret
       - run: |
           kubectl delete secret ${{ inputs.kubernetes-secret-name }} \
-            --ignore-not-found
+            --ignore-not-found --namespace=${{ inputs.kubernetes-secret-namespace }}
         shell: bash
       # set new kubernetes secret
       - run: |
           kubectl create secret generic ${{ inputs.kubernetes-secret-name }} \
-            --from-env-file=secrets.env
+            --from-env-file=secrets.env \
+            --namespace=${{ inputs.kubernetes-secret-namespace }}
         shell: bash
