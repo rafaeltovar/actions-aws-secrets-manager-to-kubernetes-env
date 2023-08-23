@@ -8,8 +8,8 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: rafaeltovar/actions-aws-secrets-manager-to-kubernetes-env@v1
+      - uses: actions/checkout@v3
+      - uses: rafaeltovar/actions-aws-secrets-manager-to-kubernetes-env@v1.2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.AWS_ACCESS_SECRET }}
